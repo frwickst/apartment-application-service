@@ -30,5 +30,6 @@
 		"ms-python.python"
 	],
 	"shutdownAction": "none",
-	"remoteUser": "appuser"
+	"remoteUser": "appuser",
+	"postCreateCommand": "pre-commit install --install-hooks"
 }
