@@ -1,35 +1,35 @@
 {
-	"name": "Existing Docker Compose (Extend)",
-	"dockerComposeFile": [
-		"../docker-compose.yml",
-		"docker-compose.yml"
-	],
-	"service": "django",
-	"workspaceFolder": "/workspace",
-	"settings": {
-		"editor.formatOnSave": true,
-		"[python]": {
-			"editor.codeActionsOnSave": {
-				"source.organizeImports": true
-			}
-		},
-		"python.formatting.provider": "black",
-		"python.languageServer": "Pylance",
-		"python.linting.flake8Enabled": true,
-		"python.linting.pylintEnabled": true,
-		"python.linting.enabled": true,
-		"python.linting.pylintArgs": [
-			"--load-plugins",
-			"pylint_django",
-			"--django-settings-module=apartment_application_service.settings"
-		],
-		"python.pythonPath": "/usr/local/bin/python",
-		"python.testing.pytestEnabled": true
-	},
-	"extensions": [
-		"ms-python.python"
-	],
-	"shutdownAction": "none",
-	"remoteUser": "appuser",
-	"postCreateCommand": "pre-commit install --install-hooks"
+    "name": "Existing Docker Compose (Extend)",
+    "dockerComposeFile": [
+        "../docker-compose.yml",
+        "docker-compose.yml"
+    ],
+    "service": "django",
+    "workspaceFolder": "/workspace",
+    "settings": {
+        "editor.formatOnSave": true,
+        "[python]": {
+            "editor.codeActionsOnSave": {
+                "source.organizeImports": true
+            }
+        },
+        "python.formatting.provider": "black",
+        "python.languageServer": "Pylance",
+        "python.linting.flake8Enabled": true,
+        "python.linting.pylintEnabled": true,
+        "python.linting.enabled": true,
+        "python.linting.pylintArgs": [
+            "--load-plugins",
+            "pylint_django",
+            "--django-settings-module=apartment_application_service.settings"
+        ],
+        "python.pythonPath": "/usr/local/bin/python",
+        "python.testing.pytestEnabled": true
+    },
+    "extensions": [
+        "ms-python.python"
+    ],
+    "shutdownAction": "none",
+    "remoteUser": "appuser",
+    "postCreateCommand": "pre-commit install --install-hooks"
 }
