@@ -81,6 +81,7 @@ USE_X_FORWARDED_HOST = env.bool("USE_X_FORWARDED_HOST")
 DATABASES = {"default": env.db()}
 
 CACHES = {"default": env.cache()}
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 vars().update(env.email_url())  # EMAIL_BACKEND etc.
 MAILER_EMAIL_BACKEND = EMAIL_BACKEND  # noqa: F821
 MAILER_LOCK_PATH = env.str("MAILER_LOCK_PATH")
