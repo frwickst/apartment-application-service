@@ -1,12 +1,12 @@
 from enum import Enum
 
 
-class ApplicationState(Enum):
+class ApplicationState(str, Enum):
     SUBMITTED = "submitted"
     RESERVED = "reserved"
 
 
-class ApplicationType(Enum):
+class ApplicationType(str, Enum):
     HITAS = "hitas"
     PUOLIHITAS = "puolihitas"
     HASO = "haso"
