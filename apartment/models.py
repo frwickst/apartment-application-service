@@ -6,11 +6,11 @@ from apartment.enums import IdentifierSchemaType
 
 
 class Project(models.Model):
-    street_address = models.CharField(_("street address"), max_length=200)
+    street_address = models.CharField(_("street address"), max_length=200, null=False)
 
 
 class Apartment(models.Model):
-    street_address = models.CharField(_("street address"), max_length=200)
+    street_address = models.CharField(_("street address"), max_length=200, null=False)
     apartment_number = models.PositiveSmallIntegerField(_("apartment number"))
     project = models.ForeignKey(
         Project, on_delete=models.CASCADE, related_name="apartments"

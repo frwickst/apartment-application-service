@@ -1,4 +1,3 @@
-import datetime
 import uuid
 
 from apartment.tests.factories import IdentifierFactory
@@ -20,7 +19,7 @@ def haso_application_data_with_additional_applicant(profile):
         "application_uuid": str(uuid.uuid4()),
         "application_type": "haso",
         "user_id": str(profile.id),
-        "has_children": "True",
+        "has_children": True,
         "additional_applicant": {
             "first_name": applicant.first_name,
             "last_name": applicant.last_name,
@@ -29,9 +28,9 @@ def haso_application_data_with_additional_applicant(profile):
             "postal_code": applicant.postal_code,
             "city": applicant.city,
             "phone_number": applicant.phone_number,
-            "date_of_birth": datetime.datetime(2000, 5, 17),
+            "date_of_birth": "2000-05-14",
         },
-        "project_id": uuid.uuid4(),
+        "project_id": str(uuid.uuid4()),
         "apartments": apartments_data,
     }
     return application_data

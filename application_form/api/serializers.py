@@ -4,57 +4,70 @@
 # from application_form.enums import ApplicationType
 from datetime import datetime
 from rest_framework import serializers
-from rest_framework.fields import CharField, UUIDField  # ChoiceField, IntegerField,
+from rest_framework.fields import UUIDField
 
 from application_form.models import Applicant, Application, ApplicationApartment
 from users.models import Profile
 
 
 class ApplicantSerializer(serializers.ModelSerializer):
-    date_of_birth = serializers.CharField(source="age")
+    age = serializers.SerializerMethodField()
 
     class Meta:
         model = Applicant
-        fields = [
-            "first_name",
-            "last_name",
-            "email",
-            "address",
-            "postal_code",
-            "city",
-            "phone_number",
-            "date_of_birth",
-        ]
+        fields = "__all__"
+        #  [
+        #     "first_name",
+        #     "last_name",
+        #     "email",
+        #     "street_address",
+        #     "postal_code",
+        #     "city",
+        #     "phone_number",
+        #     # "age",
+        #  ]
 
-    def get_age(self, instance):
+    def get_age(self, obj):
+        print("something")
+        if obj.age:
+
+            return obj.age
         # date = datetime.strptime(instance.date_of_birth.year)
-        print("----", datetime.now().year - instance.date_of_birth.year)
-        return datetime.now().year - instance.date_of_birth.year
+        print("----", datetime.now().year - self.date_of_birth.year)
+        return datetime.now().year - self.date_of_birth.year
 
 
 class ApplicationSerializer(serializers.ModelSerializer):
-    application_uuid = UUIDField(source="id", format="hex_verbose")
-    application_type = CharField(source="type")
-    applicants_count = serializers.SerializerMethodField()
+    application_uuid = UUIDField(source="external_uuid", format="hex_verbose")
+    additional_applicant = serializers.IntegerField(source="applicants_count")
+    application_type = serializers.CharField(source="type")
     user_id = UUIDField(source="profile_id", format="hex_verbose")
+    right_of_residence = serializers.SerializerMethodField()
 
     class Meta:
         model = Application
         fields = [
             "application_uuid",
             "application_type",
-            "applicants_count",
+            "additional_applicant",
             "user_id",
+            "right_of_residence",
             "has_children",
         ]
 
-    def get_applicants_count(self, instance):
-        if instance.additional_aplicant_data:
-            return 2
-        return 1
+    # def get_applicants_count(self):
+    #     if self.additional_applicant:
+    #         return 2
+    #     return 1
 
-    def get_profile(self, instance):
-        return Profile.objects.get(id=instance.user_id)
+    def get_profile(self):
+        print("something")
+        return Profile.objects.get(id=self.user_id)
+
+    def get_right_of_residence(self, obj):
+        if obj.right_of_residence:
+            return obj.right_of_residence
+        return Profile.objects.get(id=self.user_id).right_of_residence
 
 
 class ApplicationApartmentSerializer(serializers.ModelSerializer):

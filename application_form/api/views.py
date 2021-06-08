@@ -7,7 +7,8 @@ from rest_framework import status  # serializers,
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
-from apartment.api.serializers import ApartmentSerializer
+from apartment.api.serializers import ApartmentSerializer, ProjectSerializer
+from apartment.enums import IdentifierSchemaType
 from apartment.models import Project  # Apartment,
 from application_form.api.serializers import (
     ApplicantSerializer,
@@ -26,14 +27,38 @@ settings.LOG_LEVEL = "DEBUG"
 class ApplicationViewSet(ModelViewSet):
     queryset = Application.objects.all()
     serializer_class = ApplicationSerializer
+    lookup_field = "external_uuid"
 
     @transaction.atomic
-    def create(self, request):
-        print(request)
+    def create(self, request):  # noqa: C901
+        # print("----request.data----", request.data)
         apartments_data = request.data.pop("apartments")
         project_uuid = request.data.pop("project_id")
-        project, _ = Project.objects.get_or_create(id=project_uuid)
-        additional_aplicant_data = request.data.pop("additional_applicant")
+
+        try:
+            project_serializer = ProjectSerializer(
+                data={
+                    "identifiers": [
+                        {
+                            "schema_type": "att_pro_es",
+                            "identifier": project_uuid,
+                        }
+                    ]
+                }
+            )
+            project_serializer.is_valid(raise_exception=True)
+            print("--validated", project_serializer.validated_data)
+            project = project_serializer.save()
+            print("---project", Project.objects.get(pk=project.pk).street_address)
+
+            _logger.info(f"Project {project.pk} created")
+        except Exception:
+            _logger.exception(f"Project {project_uuid} not created")
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        additional_applicant_data = request.data["additional_applicant"]
+        if additional_applicant_data:
+            request.data["additional_applicant"] = 2
 
         try:
             application_serializer = self.get_serializer(data=request.data)
@@ -46,23 +71,32 @@ class ApplicationViewSet(ModelViewSet):
         except Exception:
             _logger.exception(
                 f"Application {request.data['application_uuid']} not \
-                created"
+created"
             )
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
         try:
             for priority, apartment_id in apartments_data.items():
-                apartment_data = {"id": apartment_id, "project": project.id}
+                apartment_data = {
+                    "identifiers": [
+                        {
+                            "schema_type": IdentifierSchemaType("att_pro_es"),
+                            "identifier": apartment_id,
+                        }
+                    ],
+                    "project": project.id,
+                }
                 apartment_serializer = ApartmentSerializer(data=apartment_data)
                 apartment_serializer.is_valid(raise_exception=True)
+                print("---apartment_data", apartment_serializer.validated_data)
                 apartment_created = apartment_serializer.create(
                     apartment_serializer.validated_data
                 )
                 _logger.info(f"apartments {apartment_created.pk} created")
 
                 applicationapartment_data = {
-                    "application": application.id,
-                    "apartment": apartment_created.id,
+                    "application": application.pk,
+                    "apartment": apartment_created.pk,
                     "priority_number": priority,
                 }
                 applicationapartment_serializer = ApplicationApartmentSerializer(
@@ -84,11 +118,12 @@ class ApplicationViewSet(ModelViewSet):
                 "first_name": applicant.user.first_name,
                 "last_name": applicant.user.last_name,
                 "email": applicant.user.email,
-                "address": applicant.address,
+                "street_address": applicant.street_address,
                 "postal_code": applicant.postal_code,
                 "city": applicant.city,
                 "phone_number": applicant.phone_number,
                 "date_of_birth": applicant.date_of_birth.strftime("%Y-%m-%d"),
+                # "age": 32,
                 # datetime.strptime(
                 # applicant.date_of_birth, "%Y-%m-%d"
                 # applicant.date_of_birth,  # .strftime("%Y-%m-%d"),
@@ -100,10 +135,10 @@ class ApplicationViewSet(ModelViewSet):
             applicant = applicant_serializer.create(applicant_serializer.validated_data)
             _logger.info(f"applicant {applicant.pk} created")
 
-            if additional_aplicant_data:
-                additional_aplicant_data["application"] = application.id
+            if additional_applicant_data:
+                additional_applicant_data["application"] = application.id
                 applicant_serializer = ApplicantSerializer(
-                    data=additional_aplicant_data
+                    data=additional_applicant_data
                 )
                 applicant_serializer.is_valid(raise_exception=True)
                 applicant = applicant_serializer.create(
