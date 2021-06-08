@@ -39,7 +39,7 @@ def test_application_with_applicants_model():
 def test_application_has_apartments_model():
     """Test application_has_apartments model"""
     application = ApplicationWithApplicantsFactory.create()
-    apartments = ApartmentFactory.create_batch_with_project(5)
+    apartments = ApartmentFactory.create_batch(5)
     ApplicationApartmentFactory.create_application_with_apartments(
         application=application, apartments=apartments
     )

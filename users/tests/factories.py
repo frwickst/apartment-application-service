@@ -25,7 +25,7 @@ class ProfileFactory(factory.django.DjangoModelFactory):
     street_address = Faker("street_address")
     city = Faker("city")
     postal_code = Faker("postcode")
-    date_of_birth = Faker("date_of_birth", minimum_age=17, maximum_age=99)
+    date_of_birth = Faker("date_of_birth", minimum_age=18, maximum_age=99)
     right_of_residence = fuzzy.FuzzyText(length=10, chars=string.digits)
     contact_language = fuzzy.FuzzyChoice(list(CONTACT_LANGUAGE_CHOICES))
     user = factory.SubFactory(UserFactory)
