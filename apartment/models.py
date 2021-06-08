@@ -2,7 +2,7 @@ from django.db import models
 from django.utils.translation import ugettext_lazy as _
 from enumfields import EnumField
 
-from .enums import IdentifierSchemaType
+from apartment.enums import IdentifierSchemaType
 
 
 class Project(models.Model):

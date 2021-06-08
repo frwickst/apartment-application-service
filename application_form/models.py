@@ -12,7 +12,9 @@ class Application(models.Model):
     external_uuid = models.UUIDField(
         _("application identifier"), default=uuid4, editable=False
     )
-    applicants_count = models.PositiveSmallIntegerField(_("applicants count"))
+    applicants_count = models.PositiveSmallIntegerField(
+        _("applicants count"), default=1
+    )
     type = EnumField(ApplicationType, max_length=15, verbose_name=_("application type"))
     right_of_residence = models.CharField(_("right of residence number"), max_length=10)
     has_children = models.BooleanField(_("has children"), default=False)
