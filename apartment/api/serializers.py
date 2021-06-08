@@ -1,41 +1,68 @@
+import logging
+from django.db import transaction
 from rest_framework import serializers
 
 from apartment.models import Apartment, Identifier, Project
 
+_logger = logging.getLogger(__name__)
+
 
 class IdentifierSerializer(serializers.ModelSerializer):
-    # schema_type = serializers.CharField(IdentifierSchemaType)
-
     class Meta:
         model = Identifier
         fields = "__all__"
 
 
 class ProjectSerializer(serializers.ModelSerializer):
-    street_address = serializers.SerializerMethodField(allow_null=False)
-    identifiers = IdentifierSerializer(many=True, read_only=True)
+    identifier = serializers.CharField(allow_null=False)
+    schema_type = serializers.CharField(allow_null=False)
 
     class Meta:
         model = Project
-        fields = "__all__"
+        fields = [
+            "schema_type",
+            "identifier",
+            "street_address",
+        ]
 
-    def get_street_address(self):
-        return "elastic_apartment_street_address"
+    @transaction.atomic
+    def create(self, validated_data):
+        project = Project.objects.create(
+            street_address=validated_data["street_address"],
+        )
+        Identifier.objects.create(
+            schema_type=validated_data["schema_type"],
+            identifier=validated_data["identifier"],
+            project=project,
+        )
+        return project
 
 
 class ApartmentSerializer(serializers.ModelSerializer):
-    street_address = serializers.SerializerMethodField()
-    apartment_number = serializers.SerializerMethodField()  # serializers.IntegerField()
-    identifiers = IdentifierSerializer(many=True, read_only=True)
+    identifier = serializers.CharField(allow_null=False)
+    schema_type = serializers.CharField(allow_null=False)
 
     class Meta:
         model = Apartment
-        fields = ["street_address", "apartment_number", "identifiers", "project"]
+        fields = [
+            "street_address",
+            "apartment_number",
+            "schema_type",
+            "identifier",
+            "project",
+        ]
         # "__all__"
 
-    def get_street_address(self):
-        # print("returning street")
-        return "elastic_apartment_street_address"
-
-    def get_apartment_number(self):
-        return 1
+    @transaction.atomic
+    def create(self, validated_data):
+        apartment = Apartment.objects.create(
+            street_address=validated_data["street_address"],
+            apartment_number=validated_data["apartment_number"],
+            project=validated_data["project"],
+        )
+        Identifier.objects.create(
+            schema_type=validated_data["schema_type"],
+            identifier=validated_data["identifier"],
+            apartment=apartment,
+        )
+        return apartment

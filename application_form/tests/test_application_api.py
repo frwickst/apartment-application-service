@@ -2,6 +2,7 @@ import pytest
 import uuid
 from django.conf import settings
 
+from apartment.models import Apartment, Project
 from application_form.models import Applicant, Application, ApplicationApartment
 from application_form.tests.factories import (  # ApplicantFactory,
     ApplicationWithApplicantsFactory,
@@ -44,9 +45,14 @@ def test_application_post(client):
     data = haso_application_data_with_additional_applicant(profile)
 
     response = client.post("/v1/applications/", data, content_type="application/json")
-
+    print(
+        "---test",
+        Application.objects.get(external_uuid=data["application_uuid"]).profile,
+    )
     assert response.status_code == 201
-    assert Application.objects.get(pk=data["application_uuid"])
+    assert Project.objects.first().identifiers
+    assert Application.objects.get(external_uuid=data["application_uuid"]).profile
+    assert Apartment.objects.filter(project=Project.objects.first()).count() == 5
     assert (
         ApplicationApartment.objects.filter(
             application__pk=data["application_uuid"]
@@ -58,3 +64,4 @@ def test_application_post(client):
         first_name=data["additional_applicant"]["first_name"],
         last_name=data["additional_applicant"]["last_name"],
     )
+    assert False

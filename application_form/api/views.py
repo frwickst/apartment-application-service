@@ -1,21 +1,19 @@
-# from datetime import datetime
-# from users.models import Profile
 import logging
+from datetime import datetime
 from django.conf import settings
 from django.db import transaction
-from rest_framework import status  # serializers,
+from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
 from apartment.api.serializers import ApartmentSerializer, ProjectSerializer
 from apartment.enums import IdentifierSchemaType
-from apartment.models import Project  # Apartment,
 from application_form.api.serializers import (
     ApplicantSerializer,
     ApplicationApartmentSerializer,
     ApplicationSerializer,
 )
-from application_form.models import Application  # , ApplicationApartment
+from application_form.models import Application
 from users.models import Profile
 
 _logger = logging.getLogger(__name__)
@@ -32,30 +30,22 @@ class ApplicationViewSet(ModelViewSet):
     @transaction.atomic
     def create(self, request):  # noqa: C901
         # print("----request.data----", request.data)
-        apartments_data = request.data.pop("apartments")
         project_uuid = request.data.pop("project_id")
-
+        project_data = {
+            "schema_type": "att_pro_es",
+            "identifier": str(project_uuid),
+            "street_address": "some address",
+        }
         try:
-            project_serializer = ProjectSerializer(
-                data={
-                    "identifiers": [
-                        {
-                            "schema_type": "att_pro_es",
-                            "identifier": project_uuid,
-                        }
-                    ]
-                }
-            )
+            project_serializer = ProjectSerializer(data=project_data)
             project_serializer.is_valid(raise_exception=True)
-            print("--validated", project_serializer.validated_data)
-            project = project_serializer.save()
-            print("---project", Project.objects.get(pk=project.pk).street_address)
-
+            project = project_serializer.create(project_serializer.validated_data)
             _logger.info(f"Project {project.pk} created")
         except Exception:
             _logger.exception(f"Project {project_uuid} not created")
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
+        apartments_data = request.data.pop("apartments")
         additional_applicant_data = request.data["additional_applicant"]
         if additional_applicant_data:
             request.data["additional_applicant"] = 2
@@ -78,17 +68,14 @@ created"
         try:
             for priority, apartment_id in apartments_data.items():
                 apartment_data = {
-                    "identifiers": [
-                        {
-                            "schema_type": IdentifierSchemaType("att_pro_es"),
-                            "identifier": apartment_id,
-                        }
-                    ],
+                    "schema_type": IdentifierSchemaType("att_pro_es"),
+                    "identifier": apartment_id,
+                    "street_address": "something",
+                    "apartment_number": 1,
                     "project": project.id,
                 }
                 apartment_serializer = ApartmentSerializer(data=apartment_data)
                 apartment_serializer.is_valid(raise_exception=True)
-                print("---apartment_data", apartment_serializer.validated_data)
                 apartment_created = apartment_serializer.create(
                     apartment_serializer.validated_data
                 )
@@ -112,7 +99,9 @@ created"
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
         try:
+            # primary applicant
             applicant = Profile.objects.get(id=request.data["user_id"])
+            applicant_age = datetime.now().year - applicant.date_of_birth.year
             applicant_data = {
                 "application": application.id,
                 "first_name": applicant.user.first_name,
@@ -122,31 +111,34 @@ created"
                 "postal_code": applicant.postal_code,
                 "city": applicant.city,
                 "phone_number": applicant.phone_number,
-                "date_of_birth": applicant.date_of_birth.strftime("%Y-%m-%d"),
-                # "age": 32,
-                # datetime.strptime(
-                # applicant.date_of_birth, "%Y-%m-%d"
-                # applicant.date_of_birth,  # .strftime("%Y-%m-%d"),
+                "age": applicant_age,
                 "is_primary_applicant": True,
             }
-            # print("------applicant", applicant.)
+
             applicant_serializer = ApplicantSerializer(data=applicant_data)
             applicant_serializer.is_valid(raise_exception=True)
+            print("---applicant_data", applicant_serializer.validated_data)
             applicant = applicant_serializer.create(applicant_serializer.validated_data)
-            _logger.info(f"applicant {applicant.pk} created")
-
-            if additional_applicant_data:
-                additional_applicant_data["application"] = application.id
-                applicant_serializer = ApplicantSerializer(
-                    data=additional_applicant_data
-                )
-                applicant_serializer.is_valid(raise_exception=True)
-                applicant = applicant_serializer.create(
-                    applicant_serializer.validated_data
-                )
-            _logger.info(f"additional applicant {applicant.pk} created")
+            _logger.info(f"Primary applicant {applicant.pk} created")
         except Exception:
-            _logger.exception("Applicants not created")
+            _logger.exception(f"Primary applicant {applicant.pk} not created")
             return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        # try:
+        #     # additional applicant
+        #     if additional_applicant_data:
+        #         additional_applicant_data["application"] = application.id
+        #         applicant_age = datetime.now().year - applicant.date_of_birth.year
+        #         applicant_serializer = ApplicantSerializer(
+        #             data=additional_applicant_data
+        #         )
+        #         applicant_serializer.is_valid(raise_exception=True)
+        #         applicant = applicant_serializer.create(
+        #             applicant_serializer.validated_data
+        #         )
+        #     _logger.info(f"Additional applicant {applicant.pk} created")
+        # except Exception:
+        #     _logger.exception("Additional applicant not created")
+        #     return Response(status=status.HTTP_400_BAD_REQUEST)
 
         return Response(status=status.HTTP_201_CREATED)
