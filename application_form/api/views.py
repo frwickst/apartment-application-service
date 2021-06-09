@@ -14,6 +14,7 @@ from application_form.api.serializers import (
     ApplicationSerializer,
 )
 from application_form.models import Application
+from application_form.services import ApplicationFormService
 from users.models import Profile
 
 _logger = logging.getLogger(__name__)
@@ -29,12 +30,14 @@ class ApplicationViewSet(ModelViewSet):
 
     @transaction.atomic
     def create(self, request):  # noqa: C901
-        # print("----request.data----", request.data)
+        print("----request.data----", request.data)
+        service = ApplicationFormService(request.data)
+
         project_uuid = request.data.pop("project_id")
         project_data = {
             "schema_type": "att_pro_es",
             "identifier": str(project_uuid),
-            "street_address": "some address",
+            "street_address": service.get_elastic_project_data(project_uuid),
         }
         try:
             project_serializer = ProjectSerializer(data=project_data)
@@ -67,11 +70,12 @@ created"
 
         try:
             for priority, apartment_id in apartments_data.items():
+                street, num = service.get_elastic_apartment_data(apartment_id)
                 apartment_data = {
                     "schema_type": IdentifierSchemaType("att_pro_es"),
                     "identifier": apartment_id,
-                    "street_address": "something",
-                    "apartment_number": 1,
+                    "street_address": street,
+                    "apartment_number": num,
                     "project": project.id,
                 }
                 apartment_serializer = ApartmentSerializer(data=apartment_data)
@@ -117,28 +121,34 @@ created"
 
             applicant_serializer = ApplicantSerializer(data=applicant_data)
             applicant_serializer.is_valid(raise_exception=True)
-            print("---applicant_data", applicant_serializer.validated_data)
             applicant = applicant_serializer.create(applicant_serializer.validated_data)
             _logger.info(f"Primary applicant {applicant.pk} created")
         except Exception:
             _logger.exception(f"Primary applicant {applicant.pk} not created")
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
-        # try:
-        #     # additional applicant
-        #     if additional_applicant_data:
-        #         additional_applicant_data["application"] = application.id
-        #         applicant_age = datetime.now().year - applicant.date_of_birth.year
-        #         applicant_serializer = ApplicantSerializer(
-        #             data=additional_applicant_data
-        #         )
-        #         applicant_serializer.is_valid(raise_exception=True)
-        #         applicant = applicant_serializer.create(
-        #             applicant_serializer.validated_data
-        #         )
-        #     _logger.info(f"Additional applicant {applicant.pk} created")
-        # except Exception:
-        #     _logger.exception("Additional applicant not created")
-        #     return Response(status=status.HTTP_400_BAD_REQUEST)
+        try:
+            # additional applicant
+            if additional_applicant_data:
+                additional_applicant_data["application"] = application.id
+
+                additional_applicant_data["age"] = (
+                    datetime.now().year
+                    - datetime.strptime(
+                        additional_applicant_data.pop("date_of_birth"), "%Y-%m-%d"
+                    ).year
+                )
+                applicant_serializer = ApplicantSerializer(
+                    data=additional_applicant_data
+                )
+                applicant_serializer.is_valid(raise_exception=True)
+                print("---applicant_data", applicant_serializer.validated_data)
+                applicant = applicant_serializer.create(
+                    applicant_serializer.validated_data
+                )
+            _logger.info(f"Additional applicant {applicant.pk} created")
+        except Exception:
+            _logger.exception("Additional applicant not created")
+            return Response(status=status.HTTP_400_BAD_REQUEST)
 
         return Response(status=status.HTTP_201_CREATED)

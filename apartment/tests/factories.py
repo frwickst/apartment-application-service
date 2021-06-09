@@ -67,11 +67,20 @@ class IdentifierFactory(factory.django.DjangoModelFactory):
     apartment = factory.SubFactory(ApartmentFactory)
 
     @classmethod
-    def build_batch_for_att_schema(cls, size: int):
-        return [
-            cls.build(
-                identifier=Faker("uuid4"),
-                schema_type=IdentifierSchemaType.ATT_PROJECT_ES,
-            )
-            for i in range(size)
-        ]
+    def build_batch_for_att_schema(cls, size: int, uuids_list: list):
+        if not list:
+            return [
+                cls.build(
+                    identifier=Faker("uuid4"),
+                    schema_type=IdentifierSchemaType.ATT_PROJECT_ES,
+                )
+                for i in range(size)
+            ]
+        else:
+            return [
+                cls.build(
+                    identifier=uuids_list[i],
+                    schema_type=IdentifierSchemaType.ATT_PROJECT_ES,
+                )
+                for i in range(size)
+            ]

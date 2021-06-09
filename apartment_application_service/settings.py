@@ -261,6 +261,14 @@ LOGGING = {
             # required to avoid double logging with root logger
             "propagate": False,
         },
+        "application_form": {
+            "level": env("APPS_LOG_LEVEL"),
+            "handlers": [
+                "console",
+            ],
+            # required to avoid double logging with root logger
+            "propagate": False,
+        },
     },
 }
 

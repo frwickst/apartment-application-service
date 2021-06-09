@@ -1,10 +1,7 @@
-import logging
 from django.db import transaction
 from rest_framework import serializers
 
 from apartment.models import Apartment, Identifier, Project
-
-_logger = logging.getLogger(__name__)
 
 
 class IdentifierSerializer(serializers.ModelSerializer):
