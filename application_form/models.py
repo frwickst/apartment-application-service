@@ -8,6 +8,7 @@ from pgcrypto.fields import (
     EmailPGPPublicKeyField,
     IntegerPGPPublicKeyField,
 )
+from typing import List, Optional
 from uuid import uuid4
 
 from apartment.models import Apartment
@@ -29,12 +30,6 @@ class Application(TimestampedModel):
     type = EnumPGPPublicKeyField(
         ApplicationType, max_length=15, verbose_name=_("application type")
     )
-    state = EnumField(
-        ApplicationState,
-        max_length=15,
-        default=ApplicationState.SUBMITTED,
-        verbose_name=_("application state"),
-    )
     right_of_residence = IntegerPGPPublicKeyField(
         _("right of residence number"), null=True
     )
@@ -48,6 +43,31 @@ class Application(TimestampedModel):
     )
 
     audit_log_id_field = "external_uuid"
+
+    def state(self, apartment: Apartment) -> Optional[ApplicationState]:
+        try:
+            return self.applicationapartment_set.get(apartment=apartment).state
+        except ApplicationApartment.DoesNotExist:
+            return None
+
+    def set_state(self, apartment: Apartment, state: ApplicationState):
+        app_apartment = self.applicationapartment_set.get(apartment=apartment)
+        app_apartment.state = state
+        app_apartment.save(update_fields=["state"])
+
+    @property
+    def reserved_apartments(self) -> List[Apartment]:
+        try:
+            return self.apartments.filter(
+                queue__queue_applications__queue_position=0,
+                queue__queue_applications__application=self,
+                application__applicationapartment__state__in=[
+                    ApplicationState.RESERVED,
+                    ApplicationState.REVIEW,
+                ],
+            ).order_by("applicationapartment__priority_number")
+        except (ApplicationApartment.DoesNotExist, Apartment.DoesNotExist):
+            return []
 
 
 class Applicant(TimestampedModel):
@@ -84,3 +104,41 @@ class ApplicationApartment(models.Model):
     application = models.ForeignKey(Application, on_delete=models.CASCADE)
     apartment = models.ForeignKey(Apartment, on_delete=models.CASCADE)
     priority_number = IntegerPGPPublicKeyField(_("priority number"))
+    state = EnumField(
+        ApplicationState,
+        max_length=15,
+        default=ApplicationState.SUBMITTED,
+        verbose_name=_("application state"),
+    )
+
+
+class ReservationQueue(models.Model):
+    apartment = models.OneToOneField(
+        Apartment, on_delete=models.CASCADE, related_name="queue"
+    )
+
+
+class ReservationQueueApplication(models.Model):
+    queue = models.ForeignKey(
+        ReservationQueue, on_delete=models.CASCADE, related_name="queue_applications"
+    )
+    queue_position = models.IntegerField(_("position in queue"))
+    application = models.ForeignKey(
+        Application, on_delete=models.CASCADE, related_name="queue_applications"
+    )
+
+    class Meta:
+        unique_together = [
+            ("queue", "queue_position"),
+            ("queue", "application"),
+        ]
+
+
+class ReservationQueueChangeEvent(models.Model):
+    queue = models.ForeignKey(
+        ReservationQueue, on_delete=models.CASCADE, related_name="change_events"
+    )
+    position_change = models.IntegerField(_("position change"))
+    position_change_reason = models.CharField(
+        _("position change reason"), max_length=255
+    )
